@@ -28,8 +28,8 @@ python3 start_meridiano.py --all >> "$LOG_FILE" 2>&1
 
 # 4. Atualizar a Pagina Web (Reiniciar Servidor Web)
 # Se voce estiver usando systemd (recomendado), descomente a linha abaixo:
-# echo "[3/4] Reiniciando serviço web (systemd)..." >> "$LOG_FILE"
-# sudo systemctl restart meridiano.service
+echo "[3/4] Reiniciando serviço web (systemd)..." >> "$LOG_FILE"
+sudo systemctl restart meridiano.service
 
 # Alternativa: Se estiver rodando via PM2 (otimo para servidores com pouca RAM)
 # pm2 restart meridiano >> "$LOG_FILE" 2>&1

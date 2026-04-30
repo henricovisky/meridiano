@@ -42,16 +42,15 @@ class _RateLimitSignal(Exception):
 MODEL_PROFILES: dict[str, dict] = {
     # Perfil A – Flash Models (High Performance)
     "gemini/gemini-2.5-flash": {"rpm": 10, "rpd": 1500},
-    "gemini/gemini-2.0-flash": {"rpm": 10, "rpd": 1500},
-    "gemini/gemini-2.0-flash-lite": {"rpm": 10, "rpd": 1500},
-    "gemini/gemini-1.5-flash": {"rpm": 10, "rpd": 1500},
+    "gemini/gemini-3-flash-preview": {"rpm": 10, "rpd": 1500},
 
     # Perfil B – Heavy / Research Models
     # Reduzido para 5 RPM para evitar estourar o limite de tokens (15k/min)
     "gemini/gemma-3-4b-it": {"rpm": 5, "rpd": 14_000},
+    "gemini/gemma-3-27b-it": {"rpm": 5, "rpd": 14_000},
 
     # Perfil C – Previews
-    "gemini/gemini-2.5-flash-preview-04-17": {"rpm": 10, "rpd": 20},
+    "gemini/gemini-2.5-flash-lite": {"rpm": 10, "rpd": 20},
 
     # Embeddings
     "gemini/gemini-embedding-001": {"rpm": 1_500, "rpd": 100_000},

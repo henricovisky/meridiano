@@ -39,7 +39,7 @@ python3 src/meridiano/run_briefing.py
 # Atualiza a página web (assumindo que o Flask roda via systemd)
 # Descomente e ajuste o nome do serviço abaixo para reiniciar a aplicação web
 echo "Reiniciando serviço da página web..."
-# sudo systemctl restart meridiano-web.service
+sudo systemctl restart meridiano-web.service
 
 echo "==============================================="
 echo "Finalizado: $(date)"

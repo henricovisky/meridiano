@@ -83,8 +83,8 @@ DEFAULT_FEED_PROFILE = "brasil"
 # --- Other ---
 DATABASE_FILE = "meridian.db"  # Keep for backward compatibility
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_FILE}")
+# Database configuration (Hardcoded to SQLite)
+DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
 
 # Flask configuration
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-key-change-in-production")

@@ -59,18 +59,18 @@ def get_deepseek_embedding(text, model=config.EMBEDDING_MODEL):
 
 def scrape_articles(feed_profile, rss_feeds):  # Added params
     """Scrapes articles for a specific feed profile."""
-    print(f"\n--- Starting Article Scraping [{feed_profile}] ---")
+    logging.info(f"\n--- Starting Article Scraping [{feed_profile}] ---")
     new_articles_count = 0
     if not rss_feeds:
-        print(f"Warning: No RSS_FEEDS defined for profile '{feed_profile}'. Skipping scrape.")
+        logging.warning(f"Warning: No RSS_FEEDS defined for profile '{feed_profile}'. Skipping scrape.")
         return
 
     for feed_url in rss_feeds:
-        print(f"Fetching feed: {feed_url}")
+        logging.info(f"Fetching feed: {feed_url}")
         feed = feedparser.parse(feed_url)
 
         if feed.bozo:
-            print(f"Warning: Potential issue parsing feed {feed_url}: {feed.bozo_exception}")
+            logging.warning(f"Warning: Potential issue parsing feed {feed_url}: {feed.bozo_exception}")
 
         new_from_feed = 0  # contador por link
         MAX_PER_FEED = 10
@@ -94,10 +94,10 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
 
             # Limite de novos artigos por feed URL
             if new_from_feed >= MAX_PER_FEED:
-                print(f"  Limite de {MAX_PER_FEED} artigos por feed atingido: {feed_url}")
+                logging.info(f"  Limite de {MAX_PER_FEED} artigos por feed atingido: {feed_url}")
                 break
 
-            print(f"Processing new entry: {title} ({url})")
+            logging.info(f"Processing new entry: {title} ({url})")
 
             # --- 1. Try getting image from RSS feed ---
             rss_image_url = None
@@ -121,26 +121,26 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
                 rss_image_url = entry.image.get("url")
 
             if rss_image_url:
-                print(f"  Found image in RSS: {rss_image_url[:60]}...")
+                logging.info(f"  Found image in RSS: {rss_image_url[:60]}...")
             # --- End RSS Image Check ---
 
             # --- 2. Fetch Article Content & OG Image ---
-            print("  Fetching article content and OG image...")
+            logging.info("  Fetching article content and OG image...")
             fetch_result = fetch_article_content_and_og_image(url)
             raw_content = fetch_result["content"]
             og_image_url = fetch_result["og_image"]
             # --- End Fetch ---
 
             if not raw_content:
-                print(f"  Skipping article, failed to extract main content: {title}")
+                logging.info(f"  Skipping article, failed to extract main content: {title}")
                 continue
 
             # --- 3. Determine Final Image URL and Save ---
             final_image_url = rss_image_url if rss_image_url else og_image_url
             if final_image_url:
-                print(f"  Using image URL: {final_image_url[:60]}...")
+                logging.info(f"  Using image URL: {final_image_url[:60]}...")
             else:
-                print("  No image found in RSS or OG tags.")
+                logging.info("  No image found in RSS or OG tags.")
 
             article_id = database.add_article(
                 url, title, published_date, feed_source, raw_content, feed_profile, final_image_url
@@ -150,24 +150,24 @@ def scrape_articles(feed_profile, rss_feeds):  # Added params
                 new_from_feed += 1
             time.sleep(0.5)  # Be polite
 
-    print(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
+    logging.info(f"--- Scraping Finished [{feed_profile}]. Added {new_articles_count} new articles. ---")
 
 
 def process_articles(feed_profile, effective_config, limit=1000):
     """Processes unprocessed articles: summarizes and generates embeddings."""
-    print("\n--- Starting Article Processing ---")
+    logging.info("\n--- Starting Article Processing ---")
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
     summary_prompt_template = getattr(effective_config, "PROMPT_ARTICLE_SUMMARY", config.PROMPT_ARTICLE_SUMMARY)
 
     unprocessed = database.get_unprocessed_articles(feed_profile, limit)
     processed_count = 0
     if not unprocessed:
-        print("No new articles to process.")
+        logging.info("No new articles to process.")
         return
 
-    print(f"Found {len(unprocessed)} articles to process (Limit: {limit}).")
+    logging.info(f"Found {len(unprocessed)} articles to process (Limit: {limit}).")
     for article in unprocessed:
-        print(f"Processing article ID: {article['id']} - {article['url'][:50]}...")
+        logging.info(f"Processing article ID: {article['id']} - {article['url'][:50]}...")
 
         # 1. Summarize using Deepseek Chat
         # Format the potentially profile-specific summary prompt
@@ -177,46 +177,46 @@ def process_articles(feed_profile, effective_config, limit=1000):
         summary = call_deepseek_chat(summary_prompt, model=chat_model)
 
         if not summary:
-            print(f"Skipping article {article['id']} due to summarization error.")
+            logging.info(f"Skipping article {article['id']} due to summarization error.")
             continue
 
-        print(f"Article summary is: {summary}")
+        logging.info(f"Article summary is: {summary}")
 
         # 2. Generate Embedding using Deepseek (or alternative)
         # Use summary for embedding to focus on core topics and save tokens/time
         embedding = get_deepseek_embedding(summary)
 
         if not embedding:
-            print(f"Skipping article {article['id']} due to embedding error.")
+            logging.info(f"Skipping article {article['id']} due to embedding error.")
             continue  # Or store article without embedding if desired
 
         # 3. Update Database
         database.update_article_processing(article["id"], summary, embedding)
         processed_count += 1
-        print(f"Successfully processed article ID: {article['id']}")
+        logging.info(f"Successfully processed article ID: {article['id']}")
         # Throttling gerenciado pelo llm_manager — sem sleep manual aqui
 
-    print(f"--- Processing Finished. Processed {processed_count} articles. ---")
+    logging.info(f"--- Processing Finished. Processed {processed_count} articles. ---")
 
 
 def rate_articles(feed_profile, effective_config, limit=1000):
     """Rates the impact of processed articles using an LLM."""
-    print("\n--- Starting Article Impact Rating ---")
+    logging.info("\n--- Starting Article Impact Rating ---")
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", config.LLM_CHAT_MODEL)
     rating_prompt_template = getattr(effective_config, "PROMPT_IMPACT_RATING", config.PROMPT_IMPACT_RATING)
 
     unrated = database.get_unrated_articles(feed_profile, limit)
     rated_count = 0
     if not unrated:
-        print("No new articles to rate.")
+        logging.info("No new articles to rate.")
         return
 
-    print(f"Found {len(unrated)} processed articles to rate (Limit: {limit}).")
+    logging.info(f"Found {len(unrated)} processed articles to rate (Limit: {limit}).")
     for article in unrated:
-        print(f"Rating article ID: {article['id']}: {article['title']}...")
+        logging.info(f"Rating article ID: {article['id']}: {article['title']}...")
         summary = article["processed_content"]
         if not summary:
-            print(f"  Skipping article {article['id']} - no summary found.")
+            logging.info(f"  Skipping article {article['id']} - no summary found.")
             continue
 
         # Format the potentially profile-specific rating prompt
@@ -233,24 +233,24 @@ def rate_articles(feed_profile, effective_config, limit=1000):
                     score = int(match.group(1))
                     if 1 <= score <= 10:
                         impact_score = score
-                        print(f"  Article ID {article['id']} rated as: {impact_score}")
+                        logging.info(f"  Article ID {article['id']} rated as: {impact_score}")
                     else:
-                        print(
+                        logging.info(
                             f"  Warning: Rating response '{rating_response}' for article {article['id']} "
                             "is out of range (1-10)."
                         )
                 else:
-                    print(
+                    logging.info(
                         f"  Warning: Could not find valid rating (1-10) in response '{rating_response}' "
                         f"for article {article['id']}."
                     )
             except (ValueError, AttributeError) as e:
-                print(
+                logging.info(
                     f"  Warning: Could not parse integer rating from response '{rating_response}' "
                     f"for article {article['id']}: {e}"
                 )
         else:
-            print(f"  Warning: No rating response received for article {article['id']}.")
+            logging.warning(f"  Warning: No rating response received for article {article['id']}.")
 
         # Update database even if rating failed (impact_score will be None, prevents re-attempting failed ones
         # immediately)
@@ -261,25 +261,25 @@ def rate_articles(feed_profile, effective_config, limit=1000):
         # else: score=None — mantém NULL no banco para nova tentativa futura
         # Throttling gerenciado pelo llm_manager — sem sleep manual aqui
 
-    print(f"--- Rating Finished. Rated {rated_count} articles. ---")
+    logging.info(f"--- Rating Finished. Rated {rated_count} articles. ---")
 
 
 def generate_brief(feed_profile, effective_config):
     """Generates the briefing for a specific feed profile."""
-    print(f"\n--- Starting Brief Generation [{feed_profile}] ---")
+    logging.info(f"\n--- Starting Brief Generation [{feed_profile}] ---")
     chat_model = getattr(effective_config, "LLM_CHAT_MODEL", "deepseek/deepseek-chat")
 
     # Get articles *for this specific profile*
     articles = database.get_articles_for_briefing(config.BRIEFING_ARTICLE_LOOKBACK_HOURS, feed_profile)
 
     if not articles or len(articles) < config.MIN_ARTICLES_FOR_BRIEFING:
-        print(
+        logging.info(
             f"Not enough recent articles ({len(articles)}) for profile '{feed_profile}'. "
             f"Min required: {config.MIN_ARTICLES_FOR_BRIEFING}."
         )
         return
 
-    print(f"Generating brief from {len(articles)} articles.")
+    logging.info(f"Generating brief from {len(articles)} articles.")
 
     # Prepare data for clustering
     article_ids = [a["id"] for a in articles]
@@ -287,7 +287,7 @@ def generate_brief(feed_profile, effective_config):
     embeddings = [json.loads(a["embedding"]) for a in articles if a["embedding"]]  # Load JSON string
 
     if len(embeddings) != len(articles):
-        print("Warning: Some articles selected for briefing are missing embeddings. Proceeding with available ones.")
+        logging.warning("Warning: Some articles selected for briefing are missing embeddings. Proceeding with available ones.")
         # Filter articles, summaries, ids to match embeddings
         valid_indices = [i for i, a in enumerate(articles) if a["embedding"]]
         articles = [articles[i] for i in valid_indices]
@@ -296,7 +296,7 @@ def generate_brief(feed_profile, effective_config):
         # embeddings are already filtered
 
     if len(embeddings) < config.MIN_ARTICLES_FOR_BRIEFING:
-        print(
+        logging.info(
             f"Not enough articles ({len(embeddings)}) with embeddings to cluster. "
             f"Min required: {config.MIN_ARTICLES_FOR_BRIEFING}."
         )
@@ -307,23 +307,23 @@ def generate_brief(feed_profile, effective_config):
     # Clustering (using KMeans as an example)
     n_clusters = min(config.N_CLUSTERS, len(embedding_matrix) // 2)  # Ensure clusters < samples/2
     if n_clusters < 2:  # Need at least 2 clusters for KMeans typically
-        print("Not enough articles to form meaningful clusters. Skipping clustering.")
+        logging.info("Not enough articles to form meaningful clusters. Skipping clustering.")
         # Alternative: Treat all articles as one cluster or generate simple list summary
         # For now, we'll just exit brief generation
         return
 
-    print(f"Clustering {len(embedding_matrix)} articles into {n_clusters} clusters...")
+    logging.info(f"Clustering {len(embedding_matrix)} articles into {n_clusters} clusters...")
     try:
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)  # n_init='auto' in newer sklearn
         kmeans.fit(embedding_matrix)
         labels = kmeans.labels_
     except Exception as e:
-        print(f"Error during clustering: {e}")
+        logging.error(f"Error during clustering: {e}")
         return
 
     # Analyze each cluster
     cluster_analyses = []
-    print("Analyzing clusters...")
+    logging.info("Analyzing clusters...")
 
     # *** Get the cluster analysis prompt template from effective_config ***
     cluster_analysis_prompt_template = getattr(
@@ -331,7 +331,7 @@ def generate_brief(feed_profile, effective_config):
         "PROMPT_CLUSTER_ANALYSIS",  # Look for this constant
         config.PROMPT_CLUSTER_ANALYSIS,  # Fallback to default if not found
     )
-    print(f"DEBUG: Using Cluster Analysis Prompt Template:\n'''{cluster_analysis_prompt_template[:100]}...'''")  # Debug
+    logging.info(f"DEBUG: Using Cluster Analysis Prompt Template:\n'''{cluster_analysis_prompt_template[:100]}...'''")  # Debug
 
     for i in range(n_clusters):  # Use the actual n_clusters determined
         cluster_indices = np.where(labels == i)[0]
@@ -339,7 +339,7 @@ def generate_brief(feed_profile, effective_config):
             continue  # Skip empty clusters
 
         cluster_summaries = [summaries[idx] for idx in cluster_indices]
-        print(f"  Analyzing Cluster {i} ({len(cluster_summaries)} articles)")
+        logging.info(f"  Analyzing Cluster {i} ({len(cluster_summaries)} articles)")
 
         MAX_SUMMARIES_PER_CLUSTER = 10  # Consider making this configurable too?
         cluster_summaries_text = "\n\n".join([f"- {s}" for s in cluster_summaries[:MAX_SUMMARIES_PER_CLUSTER]])
@@ -363,7 +363,7 @@ def generate_brief(feed_profile, effective_config):
     # --- End Analyze each cluster ---
 
     if not cluster_analyses:
-        print("No meaningful clusters found or analyzed.")
+        logging.info("No meaningful clusters found or analyzed.")
         return
 
     # Sort clusters by size (number of articles) to prioritize major themes
@@ -373,7 +373,7 @@ def generate_brief(feed_profile, effective_config):
     brief_synthesis_prompt_template = getattr(
         effective_config, "PROMPT_BRIEF_SYNTHESIS", config.PROMPT_BRIEF_SYNTHESIS
     )  # Fallback
-    print(f"DEBUG: Using Brief Synthesis Prompt Template:\n'''{brief_synthesis_prompt_template[:100]}...'''")
+    logging.info(f"DEBUG: Using Brief Synthesis Prompt Template:\n'''{brief_synthesis_prompt_template[:100]}...'''")
 
     cluster_analyses_text = ""
     for i, cluster in enumerate(cluster_analyses[:5]):
@@ -388,9 +388,9 @@ def generate_brief(feed_profile, effective_config):
 
     if final_brief_md:
         database.save_brief(final_brief_md, article_ids, feed_profile)
-        print(f"--- Brief Generation Finished Successfully [{feed_profile}] ---")
+        logging.info(f"--- Brief Generation Finished Successfully [{feed_profile}] ---")
     else:
-        print(f"--- Brief Generation Failed [{feed_profile}]: Could not synthesize final brief. ---")
+        logging.info(f"--- Brief Generation Failed [{feed_profile}]: Could not synthesize final brief. ---")
 
 
 # --- Main Execution ---
@@ -462,17 +462,17 @@ def main():
             feed_module_name = f"feeds.{feed_profile_name}"
             feed_config = importlib.import_module(feed_module_name)
         except ImportError:
-            print(f"ERROR: Could not import feed configuration for '{feed_profile_name}'.")
-            print(f"Please ensure 'src/meridiano/feeds/{feed_profile_name}.py' exists.")
+            logging.error(f"ERROR: Could not import feed configuration for '{feed_profile_name}'.")
+            logging.info(f"Please ensure 'src/meridiano/feeds/{feed_profile_name}.py' exists.")
             rss_feeds = None
 
     if feed_config:
-        print(f"Loaded feed configuration: {feed_config.__name__}")
+        logging.info(f"Loaded feed configuration: {feed_config.__name__}")
         # Optionally merge settings if feed configs override base config values
         # For now, we just need RSS_FEEDS from it
         rss_feeds = getattr(feed_config, "RSS_FEEDS", [])
         if not rss_feeds:
-            print("Warning: RSS_FEEDS list not found or empty in feed config.")
+            logging.warning("Warning: RSS_FEEDS list not found or empty in feed config.")
     else:
         rss_feeds = None
 
@@ -504,50 +504,50 @@ def main():
             args.model = args.model.replace("ollama:", "ollama/", 1)
 
         effective_config.LLM_CHAT_MODEL = args.model
-        print(f"Overriding chat model to: {args.model}")
+        logging.info(f"Overriding chat model to: {args.model}")
 
     # Default to running all if no specific stage OR --all is provided
     should_run_all = args.run_all or not (args.scrape or args.process or args.generate or args.rate)
 
-    print(f"\nMeridian Briefing Run [{feed_profile_name}] - {datetime.now()}")
-    print("Initializing database...")
+    logging.info(f"\nMeridian Briefing Run [{feed_profile_name}] - {datetime.now()}")
+    logging.info("Initializing database...")
     database.init_db()  # Initialize DB regardless of stage run
 
     current_rss_feeds = getattr(effective_config, "RSS_FEEDS", None)
 
     if should_run_all:
-        print("\n>>> Running ALL stages <<<")
+        logging.info("\n>>> Running ALL stages <<<")
         if current_rss_feeds:
             scrape_articles(feed_profile_name, current_rss_feeds)
         else:
-            print("Skipping scrape stage: No RSS_FEEDS found for profile.")
+            logging.info("Skipping scrape stage: No RSS_FEEDS found for profile.")
         process_articles(feed_profile_name, effective_config, limit=args.limit)
         rate_articles(feed_profile_name, effective_config, limit=args.limit)
         if current_rss_feeds:
             generate_brief(feed_profile_name, effective_config)
         else:
-            print("Skipping generate stage: No RSS_FEEDS found for profile.")
+            logging.info("Skipping generate stage: No RSS_FEEDS found for profile.")
     else:
         if args.scrape:
             if current_rss_feeds:
-                print(f"\n>>> Running ONLY Scrape Articles stage [{feed_profile_name}] <<<")
+                logging.info(f"\n>>> Running ONLY Scrape Articles stage [{feed_profile_name}] <<<")
                 scrape_articles(feed_profile_name, current_rss_feeds)
             else:
-                print(f"Cannot run scrape stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
+                logging.info(f"Cannot run scrape stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
         if args.process:
-            print("\n>>> Running ONLY Process Articles stage <<<")
+            logging.info("\n>>> Running ONLY Process Articles stage <<<")
             process_articles(feed_profile_name, effective_config, limit=args.limit)
         if args.rate:
-            print("\n>>> Running ONLY Rate Articles stage <<<")
+            logging.info("\n>>> Running ONLY Rate Articles stage <<<")
             rate_articles(feed_profile_name, effective_config, limit=args.limit)
         if args.generate:
             if current_rss_feeds:  # Check if feeds exist, as brief relies on articles from them
-                print(f"\n>>> Running ONLY Generate Brief stage [{feed_profile_name}] <<<")
+                logging.info(f"\n>>> Running ONLY Generate Brief stage [{feed_profile_name}] <<<")
                 generate_brief(feed_profile_name, effective_config)
             else:
-                print(f"Cannot run generate stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
+                logging.info(f"Cannot run generate stage: No RSS_FEEDS found for profile '{feed_profile_name}'.")
 
-    print(f"\nRun Finished [{feed_profile_name}] - {datetime.now()}")
+    logging.info(f"\nRun Finished [{feed_profile_name}] - {datetime.now()}")
 
 
 if __name__ == "__main__":

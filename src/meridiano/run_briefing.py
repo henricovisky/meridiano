@@ -16,8 +16,7 @@ from sklearn.cluster import KMeans
 from sqlmodel import select
 
 from meridiano import config_base as config  # Load base config first
-from meridiano import database
-from meridiano import llm_manager
+from meridiano import database, llm_manager
 from meridiano.models import Article, get_session
 from meridiano.utils import fetch_article_content_and_og_image
 
@@ -49,7 +48,7 @@ def call_deepseek_chat(prompt, model=config.LLM_CHAT_MODEL, system_prompt=None):
 
 def get_deepseek_embedding(text, model=config.EMBEDDING_MODEL):
     """Obtém embeddings via llm_manager (throttling + backoff automáticos)."""
-    logging.getLogger(__name__).info("Embedding para: '%s...'" , text[:50])
+    logging.getLogger(__name__).info("Embedding para: '%s...'", text[:50])
     api_base = os.getenv("EMBEDDING_API_BASE_URL")
     kwargs = {"api_base": api_base} if api_base else {}
     return llm_manager.llm_embedding(model=model, text=text, **kwargs)

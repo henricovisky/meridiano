@@ -1,9 +1,11 @@
 
 import os
-from litellm import embedding
+
 from dotenv import load_dotenv
+from litellm import embedding
 
 load_dotenv()
+
 
 def test_embedding():
     model = os.getenv("EMBEDDING_MODEL", "gemini/gemini-embedding-001")
@@ -18,6 +20,7 @@ def test_embedding():
         print("Embedding generated successfully. Length:", len(response.data[0].embedding))
     except Exception as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     test_embedding()

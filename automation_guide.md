@@ -47,8 +47,8 @@ After=network.target
 
 [Service]
 User=seu_usuario
-WorkingDirectory=/home/usuario/meridiano
-ExecStart=/home/usuario/meridiano/.venv/bin/python -m meridiano.app
+WorkingDirectory=/opt/meridiano
+ExecStart=/opt/meridiano/.venv/bin/python -m meridiano.app
 Restart=always
 
 [Install]

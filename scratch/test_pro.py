@@ -1,9 +1,9 @@
 
-import os
 import litellm
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def test_pro():
     try:
@@ -16,6 +16,7 @@ def test_pro():
         print(resp["choices"][0]["message"]["content"])
     except Exception as e:
         print(f"Error with gemini-pro: {e}")
+
 
 if __name__ == "__main__":
     test_pro()

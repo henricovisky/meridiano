@@ -1,6 +1,8 @@
 
-from meridiano import database, config_base as config
 from datetime import datetime, timedelta
+
+from meridiano import config_base as config
+from meridiano import database
 
 lookback = config.BRIEFING_ARTICLE_LOOKBACK_HOURS
 profile = "brasil"

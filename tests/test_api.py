@@ -1,9 +1,11 @@
 
 import os
-from litellm import completion
+
 from dotenv import load_dotenv
+from litellm import completion
 
 load_dotenv()
+
 
 def test_llm():
     model = os.getenv("LLM_CHAT_MODEL", "gemini/gemini-2.0-flash")
@@ -18,6 +20,7 @@ def test_llm():
         print("Response:", response.choices[0].message.content)
     except Exception as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     test_llm()

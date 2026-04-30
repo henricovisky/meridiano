@@ -41,8 +41,8 @@ def setup_integration():
     mock_completion = MagicMock()
     mock_embedding = MagicMock()
 
-    completion_patcher = patch("meridiano.run_briefing.litellm.completion", mock_completion)
-    embedding_patcher = patch("meridiano.run_briefing.litellm.embedding", mock_embedding)
+    completion_patcher = patch("meridiano.llm_manager.litellm.completion", mock_completion)
+    embedding_patcher = patch("meridiano.llm_manager.litellm.embedding", mock_embedding)
 
     completion_patcher.start()
     embedding_patcher.start()

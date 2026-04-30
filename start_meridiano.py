@@ -14,7 +14,6 @@ Uso:
 """
 
 import argparse
-import os
 import platform
 import subprocess
 import sys

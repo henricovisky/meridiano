@@ -11,9 +11,9 @@ Os limites de RPM/RPD são lidos automaticamente a partir do MODEL_PROFILES
 ou sobrescritos pelas variáveis LLM_RPM e LLM_RPD.
 """
 
+import logging
 import os
 import time
-import logging
 from collections import deque
 from threading import Lock
 from typing import Optional
@@ -21,11 +21,11 @@ from typing import Optional
 import litellm
 from dotenv import load_dotenv
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    before_sleep_log,
 )
 
 load_dotenv()
@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 
 class _RateLimitSignal(Exception):
     """Sinal interno: a chamada deve ser retentada (erro 429)."""
+
 
 # ---------------------------------------------------------------------------
 # Perfis de modelos conhecidos (RPM = requests/min, RPD = requests/day)
@@ -44,14 +45,14 @@ MODEL_PROFILES: dict[str, dict] = {
     "gemini/gemini-2.0-flash": {"rpm": 10, "rpd": 1500},
     "gemini/gemini-2.0-flash-lite": {"rpm": 10, "rpd": 1500},
     "gemini/gemini-1.5-flash": {"rpm": 10, "rpd": 1500},
-    
+
     # Perfil B – Heavy / Research Models
     # Reduzido para 5 RPM para evitar estourar o limite de tokens (15k/min)
     "gemini/gemma-3-4b-it": {"rpm": 5, "rpd": 14_000},
-    
+
     # Perfil C – Previews
     "gemini/gemini-2.5-flash-preview-04-17": {"rpm": 10, "rpd": 20},
-    
+
     # Embeddings
     "gemini/gemini-embedding-001": {"rpm": 1_500, "rpd": 100_000},
     "gemini/gemini-embedding-exp-03-07": {"rpm": 5, "rpd": 100},
@@ -131,7 +132,6 @@ def _is_rate_limit_error(exc: BaseException) -> bool:
         return True
     msg = str(exc).lower()
     return any(term in msg for term in ["429", "rate limit", "too many requests", "quota", "exhausted"])
-
 
 
 # ---------------------------------------------------------------------------

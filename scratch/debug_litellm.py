@@ -1,9 +1,9 @@
 
-import os
 import litellm
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def test_debug():
     litellm.set_verbose = True
@@ -17,6 +17,7 @@ def test_debug():
         print(resp)
     except Exception as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     test_debug()

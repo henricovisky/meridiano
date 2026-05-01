@@ -46,14 +46,14 @@ MODEL_PROFILES: dict[str, dict] = {
 
     # Perfil B – Heavy / Research Models
     # Reduzido para 5 RPM para evitar estourar o limite de tokens (15k/min)
-    "gemini/gemma-3-4b-it": {"rpm": 5, "rpd": 14_000},
-    "gemini/gemma-3-27b-it": {"rpm": 5, "rpd": 14_000},
+    "gemini/gemma-3-4b-it": {"rpm": 5, "rpd": 14000},
+    "gemini/gemma-3-27b-it": {"rpm": 5, "rpd": 14000},
 
     # Perfil C – Previews
     "gemini/gemini-2.5-flash-lite": {"rpm": 10, "rpd": 20},
 
     # Embeddings
-    "gemini/gemini-embedding-001": {"rpm": 1_500, "rpd": 100_000},
+    "gemini/gemini-embedding-001": {"rpm": 1500, "rpd": 100000},
     "gemini/gemini-embedding-exp-03-07": {"rpm": 5, "rpd": 100},
 }
 

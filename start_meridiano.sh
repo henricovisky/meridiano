@@ -34,7 +34,7 @@ fi
 # Executa o pipeline principal do meridiano (scraping, processing, briefing)
 echo "Executando run_briefing.py..."
 export PYTHONPATH="$PROJECT_DIR/src"
-python3 src/meridiano/run_briefing.py --model gemini/gemma-3-4b-it --limit 5 --all
+python3 src/meridiano/run_briefing.py --model gemini/gemma-3-27b-it --all
 
 # Atualiza a página web (assumindo que o Flask roda via systemd)
 # Descomente e ajuste o nome do serviço abaixo para reiniciar a aplicação web
